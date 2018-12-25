@@ -1,0 +1,19 @@
+---
+title: Test Post
+author: Lauren
+date: '2018-12-24'
+slug: test-post
+categories:
+  - R
+tags: []
+---
+
+This is a test post. 
+
+Here's the **cars** dataset.
+
+```{r}
+str(cars)
+
+plot(cars$speed, cars$dist)
+```
