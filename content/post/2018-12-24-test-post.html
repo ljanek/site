@@ -3,9 +3,8 @@ title: Test Post
 author: Lauren
 date: '2018-12-24'
 slug: test-post
-categories:
-  - R
-tags: []
+categories: 
+tags: ["R", "CCES"]
 ---
 
 
@@ -18,3 +17,5 @@ tags: []
 ##  $ dist : num  2 10 4 22 16 10 18 26 34 17 ...</code></pre>
 <pre class="r"><code>plot(cars$speed, cars$dist)</code></pre>
 <p><img src="/post/2018-12-24-test-post_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+<pre class="r"><code>library(foreign)
+cces &lt;- read.dta(&quot;CCES16_Common_OUTPUT_Feb2018_VV.dta&quot;)</code></pre>

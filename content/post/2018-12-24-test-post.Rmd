@@ -3,17 +3,22 @@ title: Test Post
 author: Lauren
 date: '2018-12-24'
 slug: test-post
-categories:
-  - R
-tags: []
+categories: 
+tags: ["R", "CCES"]
 ---
 
 This is a test post. 
 
 Here's the **cars** dataset.
 
+
 ```{r}
 str(cars)
 
 plot(cars$speed, cars$dist)
+
+library(foreign)
+cces <- read.dta("CCES16_Common_OUTPUT_Feb2018_VV.dta")
 ```
+
+

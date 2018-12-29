@@ -1,0 +1,98 @@
+---
+title: "Exploring the 2016 CCES"
+author: "Lauren"
+date: '2018-12-28'
+slug: exploring-the-2016-cces
+---
+
+
+
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>The <a href="https://cces.gov.harvard.edu">Cooperative Congressional Election Survey</a> (CCES) is an online survey administred to over 60,000 respondents every 2 years in two waves: pre- and post- the United States Novemeber elections. The survey asks many questions on the respondents’ views on public policy, social issues, and vote choice, and as such is a treasure trove for exploring U.S. public opinion and political behavior. A file with survey responses from voters in the 2016 Presidential election is available for download <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi%3A10.7910/DVN/GDF6Z0">here</a>.</p>
+<p>To read the survey file into R, I downloaded it into my workspace, then installed and loaded the <strong>foreign</strong> package, and read the file and stored it as a data frame:</p>
+<pre class="r"><code>library(foreign)
+
+cces &lt;- read.dta(&quot;CCES16_Common_OUTPUT_Feb2018_VV.dta&quot;)</code></pre>
+</div>
+<div id="getting-started" class="section level2">
+<h2>Getting Started</h2>
+<p>To more easily examine the 2016 survey data, I selected a subset of variables of interest and renamed many of them for easier reference. (Not all selected variables are utilized in the analysis in this post). The variables I selected are key demographic characteristics of the respondents, as well as responses to questions on issues including health care, abortion, immigration, environmental policy, and others, and vote choice in the 2016 and 2012 (if applicable) elections.</p>
+<pre class="r"><code>library(tidyverse)
+cces2 &lt;- cces %&gt;%
+  filter(tookpost == &#39;Yes&#39;) %&gt;%
+  select(V101, commonweight_vv_post,
+         lookupzip, inputstate, countyfips, countyname, cdid115, birthyr, gender,
+         educ, race, hispanic, pid3, ideo5, CC16_320a, CC16_326, CC16_410a, CC16_328, CC16_330a, 
+         CC16_330d, CC16_331_1, CC16_331_3, CC16_331_7, CC16_332a,
+         CC16_332f, CC16_333a, CC16_333d, CC16_335, CC16_351I, CC16_351K, CC16_401, CC16_426_2) %&gt;%
+  rename(state = inputstate, approveobama = CC16_320a, potus12vote = CC16_326,
+         prim16vote = CC16_328, potus16vote = CC16_410a, gunbgcheck = CC16_330a, 
+         cleanair = CC16_333d, banar = CC16_330d, statusworkers = CC16_331_1, 
+         daca = CC16_331_3, deportimm = CC16_331_7, prochoice = CC16_332a, banabortion = CC16_332f,
+         regco2 = CC16_333a, gaymarriage = CC16_335, repealaca = CC16_351I, 
+         raisewage = CC16_351K, didvote16 = CC16_401, spendhealth = CC16_426_2) %&gt;%
+  mutate(age = 2016 - birthyr)
+
+# Change one level to &quot;NA&quot;
+cces2$potus16vote &lt;- na_if(cces2$potus16vote, &quot;I&#39;m not sure&quot;)</code></pre>
+</div>
+<div id="looking-at-voters-according-to-their-2016-and-2012-presidential-preference" class="section level2">
+<h2>Looking at Voters According to their 2016 and 2012 Presidential Preference</h2>
+<p>One of the interesting questions about the 2016 election is what motivated the group of voters who switched from voting for Barack Obama in 2012 to vote for Donald Trump in 2016. Here I look at this group of voters, as well as the (smaller) group of voters who chose Mitt Romney in 2016 and Hillary Clinton in 2016, and as a baseline, the far more typical voters who chose either the Republican candidate or the Democratic candidate in both the 2012 and 2016 Presidential elections.</p>
+<pre class="r"><code>attach(cces2)
+cces2$potus1216[potus12vote == &quot;Barack Obama&quot; &amp;
+                  potus16vote == &quot;Hillary Clinton (Democrat)&quot;] &lt;- &quot;Obama - Clinton&quot;
+cces2$potus1216[potus12vote == &quot;Mitt Romney&quot; &amp; 
+                  potus16vote == &quot;Hillary Clinton (Democrat)&quot;] &lt;- &quot;Romney - Clinton&quot;
+cces2$potus1216[potus12vote == &quot;Barack Obama&quot; &amp;
+                  potus16vote == &quot;Donald Trump (Republican)&quot;] &lt;- &quot;Obama - Trump&quot;
+cces2$potus1216[potus12vote == &quot;Mitt Romney&quot; &amp; 
+                  potus16vote == &quot;Donald Trump (Republican)&quot;] &lt;- &quot;Romney - Trump&quot;
+detach(cces2)</code></pre>
+<p>Next I calculated support among each of the four groups of voters for various issue positions from the survey:</p>
+<ul>
+<li>Job approval of President Obama</li>
+<li>Raising the federal minimum wage to $12/hr</li>
+<li>EPA regulation of CO2 emissions</li>
+<li>Banning assault weapons</li>
+<li>Allowing a woman to choose abortion in all circumstances</li>
+<li>Gay marriage</li>
+<li>The Affordable Care Act / Obamacare (being <em>against</em> repeal)</li>
+<li>On immigration: “Grant legal status to all illegal immigrants who have held jobs and paid taxes for at least 3 years, and not been convicted of any felony crimes.”</li>
+<li>Increased healthcare spending in the respondent’s <em>state</em> legislature</li>
+<li>Also on immigration: “Grant legal status to people who were brought to the US illegally as children, but who have graduated from a U.S. high school” (the DACA program)</li>
+</ul>
+<pre class="r"><code># Create table of issue support on 10 items for 4 groups of voters
+table1216.issues &lt;- cces2 %&gt;% filter(!is.na(potus1216)) %&gt;%
+  group_by(potus1216) %&gt;%
+  summarize(p_approveobama = weighted.mean(approveobama == &quot;Strongly approve&quot; |
+                approveobama == &quot;Somewhat approve&quot;, na.rm = TRUE, commonweight_vv_post),
+            p_banar = weighted.mean(banar == &quot;Support&quot;, na.rm = TRUE, commonweight_vv_post),
+            p_regco2 = weighted.mean(regco2 == &quot;Support&quot;, na.rm = TRUE, commonweight_vv_post),
+            p_prochoice = weighted.mean(prochoice == &quot;Support&quot;, na.rm = TRUE,
+                            commonweight_vv_post), 
+            p_gaymarriage = weighted.mean(gaymarriage == &quot;Favor&quot;, na.rm = TRUE,
+                                          commonweight_vv_post), 
+            p_aca = weighted.mean(repealaca == &quot;Against&quot;, na.rm = TRUE, commonweight_vv_post),
+            p_raisewage = weighted.mean(raisewage == &quot;For&quot;, na.rm = TRUE, 
+                            commonweight_vv_post),
+            p_spendhealth = weighted.mean(spendhealth == &quot;Greatly increase&quot; | spendhealth == 
+                            &quot;Slightly increase&quot;, na.rm = TRUE, commonweight_vv_post),
+            p_daca = weighted.mean(daca == &quot;Yes&quot;, na.rm = TRUE, commonweight_vv_post),
+            p_statusworkers = weighted.mean(statusworkers == &quot;Yes&quot;, na.rm = TRUE, 
+                            commonweight_vv_post))
+# Change table from wide to long
+library(reshape2)     
+table1216.issues.tidy &lt;- melt(table1216.issues, id.vars = &#39;potus1216&#39;)
+
+# add labels to table - helpful for plot
+library(dplyr)
+table1216.issues.tidy &lt;- table1216.issues.tidy %&gt;%
+  mutate(label = paste0(round(value*100), &quot;%&quot;))</code></pre>
+<p>The dot plot below illustrates support among each of the four groups of voters for the issues/proposals described above. At top of the plot we see that, unsurprisingly, consistent Democratic (Obama-Clinton) voters had a very high approval of President Obama (94%), while consistent Republican voters had a very low approval of him (only 2%). What might be surprising is that voters who supported Romney in 2012 but Clinton in 2016 were actually more likely to approve of President Obama (51% approving), than the group of voters who actually voted for Obama in 2012, but then switched to voting for Trump in 2016 (36% approving).</p>
+<p><img src="/post/2018-12-28-exploring-the-2016-cces_files/figure-html/unnamed-chunk-5-1.png" width="960" /></p>
+<p>Going down the plot, we see that on every issue, the consistent Democratic voters have the highest support for each proposal, which again is not surprising since these are all questions about support for what is considered the liberal position. And of course, consistent Republican voters had the lowest support for each position, although in many cases (36% supporting a ban on assault weapons?) perhaps higher than commonly assumed.</p>
+<p>On <em>most</em> questions, the Romney-Clinton voters were more likely to hold the liberal position than Obama-Trump voters. On the two immigration questions – the DACA program and an amnesty for some undocumented workers – Obama-Trump voters were especially unsupportive, with only 34% and 46% supporting each of the respective proposals. This is probably not unexpected considering an opposition to immigration was one of the strongest theme’s of Trump’s campaign, and was not especially prominent in Romney’s campaign.</p>
+<p>There are two exceptions to the pattern of Romney-Clinton voters being more likely to hold the liberal position than Obama-Trump voters – raising the minimum wage and an increase in <em>state legislature</em> spending on health care, notably two issues that are based more on economic rather than cultural values. Obama-Trump voters’ support for increasing state legislature spending on healthcare (57%) is an interesting contrast to their lack of support for the Affordable Care Act (only 28%). This may be because “Obamacare” has become such a polarized issue, where perhaps the voters who switched from voting Democrat to Republican between 2012 and 2016 are inclined to support their (new) party line. In fact, views on this issue track very closely with approval of Obama himself, suggesting the former is almost a proxy for the latter.</p>
+</div>
